@@ -17,14 +17,25 @@ import type {
 
 export async function GET(): Promise<NextResponse<ApiResponse<DashboardData>>> {
   try {
-    // 1. Aggregate stats (parallel queries — use select+length for Proxy compat)
+    // 1. Aggregate stats (parallel queries)
     const [articlesRes, keywordsRes, matchesRes, proposalsRes] =
       await Promise.all([
-        supabase.from("collected_articles").select("id"),
-        supabase.from("trend_keywords").select("id"),
-        supabase.from("match_results").select("id"),
-        supabase.from("proposals").select("id"),
+        supabase.from("collected_articles").select("*"),
+        supabase.from("trend_keywords").select("*"),
+        supabase.from("match_results").select("*"),
+        supabase.from("proposals").select("*"),
       ]);
+
+    console.log("[dashboard] counts:", {
+      articles: articlesRes.data?.length,
+      articlesErr: articlesRes.error?.message,
+      keywords: keywordsRes.data?.length,
+      keywordsErr: keywordsRes.error?.message,
+      matches: matchesRes.data?.length,
+      matchesErr: matchesRes.error?.message,
+      proposals: proposalsRes.data?.length,
+      proposalsErr: proposalsRes.error?.message,
+    });
 
     const stats: DashboardStats = {
       total_articles: articlesRes.data?.length ?? 0,
