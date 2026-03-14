@@ -18,7 +18,12 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<ApiResponse<MatchResponse>>> {
   try {
-    const body = (await request.json()) as { keyword?: string };
+    let body: { keyword?: string } = {};
+    try {
+      body = (await request.json()) as { keyword?: string };
+    } catch {
+      // no body — match all top keywords
+    }
 
     // 1. Determine which keywords to match
     let trendKeywords: TrendKeyword[];
