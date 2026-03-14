@@ -72,6 +72,41 @@ export async function callGeminiJSON<T = unknown>(
 // ─── Mock 응답 (API 키 미설정 시) ─────────────────
 
 function getMockResponse(prompt: string): string {
+  // 제안서 생성 mock (must check BEFORE 키워드 — proposal prompt also contains "키워드")
+  if (prompt.includes("제안서") || prompt.includes("선제 제안서")) {
+    return `# 트렌드 기반 선제 제안서
+
+## 1. 트렌드 요약
+최근 화장품 용기 시장에서 **에어리스 펌프** 관련 키워드가 전주 대비 72% 급증하고 있습니다.
+지속가능성과 제품 보존력에 대한 소비자 관심이 높아지면서, 에어리스 기술이 프리미엄 스킨케어를 넘어
+미드레인지 브랜드로 확산되는 추세입니다.
+
+## 2. 추천 용기
+### CS-AP-001 에어리스 진공 펌프 50ml
+- **사양**: PP / matte coating / 50ml
+- **적합 이유**: 트렌드 키워드와 형태가 직접 일치하며, 매트 코팅 마감이 현재 선호도 상위
+- **활용 방안**: 프리미엄 세럼/에센스 라인 제안
+
+### CS-AP-002 에어리스 진공 펌프 30ml
+- **사양**: PETG / UV coating / 30ml
+- **적합 이유**: 투명 소재로 내용물 가시성 확보, UV 코팅으로 제품 보호
+- **활용 방안**: 비타민C 세럼 등 광민감 제형 라인
+
+### CS-AP-003 에어리스 미니 펌프 15ml
+- **사양**: PP / glossy / 15ml
+- **적합 이유**: 트래블 사이즈 트렌드와 에어리스 기술의 결합
+- **활용 방안**: 여행용/체험용 키트 구성
+
+## 3. 기대 효과
+시장 트렌드를 선행하여 제안함으로써 클라이언트의 신제품 기획 리드타임을 단축하고,
+브랜드 경쟁력 강화에 기여할 수 있습니다.
+
+## 4. 창신의 강점
+창신은 에어리스 펌프 용기 생산 분야에서 다년간의 경험을 보유하고 있으며,
+PP/PETG 등 다양한 소재 대응이 가능합니다. 15ml~50ml까지 풀 라인업을 갖추고 있어
+클라이언트의 다양한 제품 기획에 원스톱 대응이 가능합니다.`;
+  }
+
   // 키워드 추출 mock
   if (prompt.includes("extract") || prompt.includes("키워드")) {
     return JSON.stringify([
@@ -90,30 +125,6 @@ function getMockResponse(prompt: string): string {
       suggestion:
         "Consider adding recycled material certification to strengthen trend alignment.",
     });
-  }
-
-  // 제안서 생성 mock
-  if (prompt.includes("제안서") || prompt.includes("proposal")) {
-    return `# 트렌드 기반 선제 제안서
-
-## 1. 트렌드 요약
-최근 화장품 용기 시장에서 **에어리스 펌프** 관련 키워드가 전주 대비 72% 급증하고 있습니다.
-지속가능성과 제품 보존력에 대한 소비자 관심이 높아지면서, 에어리스 기술이 프리미엄 스킨케어를 넘어
-미드레인지 브랜드로 확산되는 추세입니다.
-
-## 2. 추천 용기
-### CS-AP-001 에어리스 진공 펌프 50ml
-- **사양**: PP / matte coating / 50ml
-- **적합 이유**: 트렌드 키워드와 형태가 직접 일치하며, 매트 코팅 마감이 현재 선호도 상위
-- **활용 방안**: 프리미엄 세럼/에센스 라인 제안
-
-## 3. 기대 효과
-시장 트렌드를 선행하여 제안함으로써 클라이언트의 신제품 기획 리드타임을 단축하고,
-브랜드 경쟁력 강화에 기여할 수 있습니다.
-
-## 4. 창신의 강점
-창신은 에어리스 펌프 용기 생산 분야에서 다년간의 경험을 보유하고 있으며,
-PP/PETG 등 다양한 소재 대응이 가능합니다.`;
   }
 
   // 트렌드 요약 mock
