@@ -24,7 +24,7 @@
 | 개발 기간 | **1주 (5영업일)** |
 | 개발 인력 | **1인** 풀스택 |
 | 프론트엔드 | **Next.js + Vercel** 배포 |
-| LLM | Claude API (Anthropic) |
+| LLM | Gemini API (Google) |
 | 데이터 수집 | **실제 웹 크롤링** (Mock 데이터 아님) |
 | 용기 DB | 실제 데이터 확보 시도 → 미확보 시 가상 카탈로그로 대체 |
 

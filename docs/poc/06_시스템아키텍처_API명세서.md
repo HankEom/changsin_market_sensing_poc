@@ -12,7 +12,7 @@
   ├── /app (프론트엔드: 대시보드 3페이지)
   └── /app/api (백엔드: API Routes 4개)
          │
-         ├── Claude API ── 키워드 추출, 매칭, 제안서 생성
+         ├── Gemini API ── 키워드 추출, 매칭, 제안서 생성
          └── Supabase ──── 데이터 저장 (PostgreSQL)
 ```
 
@@ -21,7 +21,7 @@
 | 원래 설계 | PoC 단순화 | 사유 |
 |----------|-----------|------|
 | Airflow DAG 스케줄링 | 대시보드 버튼 수동 트리거 | 인프라 제거 |
-| pgvector 벡터 매칭 | Claude API 기반 텍스트 매칭 | 임베딩 파이프라인 제거 |
+| pgvector 벡터 매칭 | Gemini API 기반 텍스트 매칭 | 임베딩 파이프라인 제거 |
 | 실시간 크롤링 3개 소스 | 샘플 기사 시드 + 선택적 크롤 1개 소스 | 크롤링 안정성 리스크 제거 |
 | FastAPI 별도 서버 | Next.js API Routes 통합 | 서버 1대로 통합 |
 | Slack Webhook | 대시보드 내 알림 표시 | 외부 연동 최소화 |
@@ -38,7 +38,7 @@
 | 스타일링 | Tailwind CSS + shadcn/ui | 3.x |
 | 차트 | ~~Recharts~~ → Tailwind CSS 바 차트 | - |
 | DB | Supabase (PostgreSQL) | - |
-| LLM | Claude API (Anthropic) | claude-3-5-sonnet |
+| LLM | Gemini API (Google) | gemini-2.0-flash |
 | 배포 | Vercel | - |
 | 패키지매니저 | pnpm | - |
 
@@ -169,7 +169,7 @@ Body: {
 
 ```
 cs-msa-poc/
-├── .env.local              # API 키 (ANTHROPIC_API_KEY, SUPABASE_URL, ...)
+├── .env.local              # API 키 (GEMINI_API_KEY, SUPABASE_URL, ...)
 ├── .gitignore
 ├── package.json
 ├── next.config.ts
@@ -198,7 +198,7 @@ cs-msa-poc/
 │   │   └── proposal/       # 제안서 컴포넌트
 │   ├── lib/
 │   │   ├── supabase.ts     # Supabase 클라이언트
-│   │   ├── claude.ts       # Claude API 래퍼
+│   │   ├── gemini.ts       # Gemini API 래퍼
 │   │   ├── prompts.ts      # 프롬프트 모음
 │   │   └── sample-data.ts  # 시드 데이터
 │   └── types/

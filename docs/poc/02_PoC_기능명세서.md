@@ -2,7 +2,7 @@
 
 > **문서 버전**: v2.0 (커팅 반영)  
 > **작성일**: 2026-03-14  
-> **기술 스택**: Next.js 14 (App Router) + Supabase + Claude API + Vercel  
+> **기술 스택**: Next.js 14 (App Router) + Supabase + Gemini API + Vercel  
 > **커팅 사항**: Recharts→CSS 바 차트 / SSE 스트리밍→일반 POST / 4페이지→3페이지
 
 ---
@@ -13,7 +13,7 @@
 |----|--------|------|---------|------|
 | PF-01 | 트렌드 데이터 수집 (시드/크롤링) | 백엔드 | 필수 | |
 | PF-02 | 키워드 추출 및 트렌드 지수 생성 | 백엔드 | 필수 | |
-| PF-03 | 트렌드-용기 LLM 매칭 | 백엔드 | 필수 | pgvector 제거 → Claude 매칭 |
+| PF-03 | 트렌드-용기 LLM 매칭 | 백엔드 | 필수 | pgvector 제거 → Gemini 매칭 |
 | PF-04 | 선제 제안서 자동 생성 | 백엔드 | 필수 | ~~SSE 스트리밍~~ → 일반 POST |
 | PF-05 | 메인 대시보드 + 트렌드 | 프론트 | 필수 | PF-05+PF-06 통합 |
 | ~~PF-06~~ | ~~트렌드 지수 상세 화면~~ | ~~프론트~~ | ~~삭제~~ | PF-05에 통합 |
@@ -64,14 +64,14 @@
 
 ### 기능 설명
 
-수집된 기사에서 Claude API를 사용하여 화장품 용기 관련 키워드(형태·소재·마감)를 추출하고, 키워드별 트렌드 지수를 계산한다.
+수집된 기사에서 Gemini API를 사용하여 화장품 용기 관련 키워드(형태·소재·마감)를 추출하고, 키워드별 트렌드 지수를 계산한다.
 
 ### 처리 흐름
 
 ```
 POST /api/analyze 호출
   → Supabase에서 미분석 기사 조회 (analyzed = false)
-  → 기사 N건씩 배치로 Claude API 호출
+  → 기사 N건씩 배치로 Gemini API 호출
     → 키워드 추출 (형태/소재/마감 분류 포함)
   → 기사별 추출 키워드 → article_keywords 테이블 저장
   → 기사 analyzed = true 업데이트
@@ -104,7 +104,7 @@ trend_index = mention_count × (1 + change_rate / 100)
 
 ### 기능 설명
 
-트렌드 키워드와 용기 카탈로그를 Claude API에 전달하여 적합도를 평가하고 매칭한다. (pgvector 임베딩 파이프라인 제거 — Claude 텍스트 매칭으로 단순화)
+트렌드 키워드와 용기 카탈로그를 Gemini API에 전달하여 적합도를 평가하고 매칭한다. (pgvector 임베딩 파이프라인 제거 — Gemini 텍스트 매칭으로 단순화)
 
 ### 처리 흐름
 
@@ -112,7 +112,7 @@ trend_index = mention_count × (1 + change_rate / 100)
 POST /api/match 호출
   → trend_keywords에서 Top 5 또는 급증 키워드 조회
   → container_catalog에서 활성 용기 전체 조회
-  → Claude API 호출: "키워드와 각 용기의 적합도를 0~100으로 평가"
+  → Gemini API 호출: "키워드와 각 용기의 적합도를 0~100으로 평가"
     → 키워드당 Top 3 매칭 (적합도 ≥ 60)
   → 매칭 결과 → match_results 테이블 저장
   → 결과 반환
@@ -132,14 +132,14 @@ POST /api/match 호출
 
 ### 기능 설명
 
-매칭 결과를 기반으로 Claude API가 영업팀용 선제 제안서를 **일반 POST 응답**으로 생성한다. (~~SSE 스트리밍 제거~~ — 로딩 스피너 + 완성 텍스트 표시로 변경)
+매칭 결과를 기반으로 Gemini API가 영업팀용 선제 제안서를 **일반 POST 응답**으로 생성한다. (~~SSE 스트리밍 제거~~ — 로딩 스피너 + 완성 텍스트 표시로 변경)
 
 ### 처리 흐름
 
 ```
 POST /api/proposal 호출
   → 매칭 결과 + 트렌드 분석 데이터 조합
-  → Claude API 일반 호출 (제안서 프롬프트)
+  → Gemini API 일반 호출 (제안서 프롬프트)
   → 완성된 텍스트 반환 (Markdown)
   → proposals 테이블에 저장
 ```
