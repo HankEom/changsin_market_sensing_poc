@@ -17,28 +17,20 @@ import type {
 
 export async function GET(): Promise<NextResponse<ApiResponse<DashboardData>>> {
   try {
-    // 1. Aggregate stats (parallel queries)
+    // 1. Aggregate stats (parallel queries — use select+length for Proxy compat)
     const [articlesRes, keywordsRes, matchesRes, proposalsRes] =
       await Promise.all([
-        supabase
-          .from("collected_articles")
-          .select("id", { count: "exact", head: true }),
-        supabase
-          .from("trend_keywords")
-          .select("id", { count: "exact", head: true }),
-        supabase
-          .from("match_results")
-          .select("id", { count: "exact", head: true }),
-        supabase
-          .from("proposals")
-          .select("id", { count: "exact", head: true }),
+        supabase.from("collected_articles").select("id"),
+        supabase.from("trend_keywords").select("id"),
+        supabase.from("match_results").select("id"),
+        supabase.from("proposals").select("id"),
       ]);
 
     const stats: DashboardStats = {
-      total_articles: articlesRes.count ?? 0,
-      total_keywords: keywordsRes.count ?? 0,
-      total_matches: matchesRes.count ?? 0,
-      total_proposals: proposalsRes.count ?? 0,
+      total_articles: articlesRes.data?.length ?? 0,
+      total_keywords: keywordsRes.data?.length ?? 0,
+      total_matches: matchesRes.data?.length ?? 0,
+      total_proposals: proposalsRes.data?.length ?? 0,
     };
 
     // 2. Top 5 trend keywords by trend_index

@@ -9,29 +9,37 @@ export async function POST(): Promise<NextResponse<ApiResponse<CrawlResult>>> {
   try {
     const total = sampleArticles.length;
 
-    // Insert sample articles with ON CONFLICT (url) DO NOTHING
-    const { data: inserted, error: insertError } = await supabase
+    // Check existing URLs to count duplicates
+    const { data: existing } = await supabase
       .from("collected_articles")
-      .upsert(
-        sampleArticles.map((a) => ({
-          source: a.source,
-          url: a.url,
-          title: a.title,
-          content: a.content,
-          image_url: a.image_url,
-          language: "en",
-          published_at: a.published_at,
-          analyzed: false,
-        })),
-        { onConflict: "url", ignoreDuplicates: true }
-      )
-      .select("id");
+      .select("url");
+    const existingUrls = new Set((existing ?? []).map((r: { url: string }) => r.url));
 
-    if (insertError) {
-      throw new Error(`Insert failed: ${insertError.message}`);
+    const newArticles = sampleArticles.filter((a) => !existingUrls.has(a.url));
+    let newCount = 0;
+
+    if (newArticles.length > 0) {
+      const { error: insertError } = await supabase
+        .from("collected_articles")
+        .insert(
+          newArticles.map((a) => ({
+            source: a.source,
+            url: a.url,
+            title: a.title,
+            content: a.content,
+            image_url: a.image_url,
+            language: "en",
+            published_at: a.published_at,
+            analyzed: false,
+          }))
+        );
+
+      if (insertError) {
+        throw new Error(`Insert failed: ${insertError.message}`);
+      }
+      newCount = newArticles.length;
     }
 
-    const newCount = inserted?.length ?? 0;
     const duplicateCount = total - newCount;
 
     // Log to crawl_logs
