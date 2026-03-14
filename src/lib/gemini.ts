@@ -34,18 +34,23 @@ export async function callGemini({
     return getMockResponse(user);
   }
 
-  const geminiModel = genAI.getGenerativeModel({
-    model,
-    systemInstruction: system,
-    generationConfig: {
-      temperature,
-      maxOutputTokens: maxTokens,
-    },
-  });
+  try {
+    const geminiModel = genAI.getGenerativeModel({
+      model,
+      systemInstruction: system,
+      generationConfig: {
+        temperature,
+        maxOutputTokens: maxTokens,
+      },
+    });
 
-  const result = await geminiModel.generateContent(user);
-  const text = result.response.text();
-  return text;
+    const result = await geminiModel.generateContent(user);
+    const text = result.response.text();
+    return text;
+  } catch (err) {
+    console.warn("[gemini] API call failed, falling back to mock:", err instanceof Error ? err.message : err);
+    return getMockResponse(user);
+  }
 }
 
 /**
