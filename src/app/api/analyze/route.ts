@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { callGeminiJSON } from "@/lib/gemini";
+
+export const dynamic = "force-dynamic";
 import { getKeywordExtractionPrompt } from "@/lib/prompts";
 import type {
   ApiResponse,

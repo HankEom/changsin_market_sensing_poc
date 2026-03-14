@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sampleArticles } from "@/lib/sample-data";
+
+export const dynamic = "force-dynamic";
 import type { ApiResponse, CrawlResult } from "@/types";
 
 export async function POST(): Promise<NextResponse<ApiResponse<CrawlResult>>> {

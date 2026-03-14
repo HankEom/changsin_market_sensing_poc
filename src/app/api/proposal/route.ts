@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { callGemini } from "@/lib/gemini";
+
+export const dynamic = "force-dynamic";
 import { getProposalPrompt } from "@/lib/prompts";
 import type {
   ApiResponse,

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { callGemini } from "@/lib/gemini";
+
+export const dynamic = "force-dynamic";
 import { MODEL_LIGHT } from "@/lib/gemini";
 import { getTrendSummaryPrompt } from "@/lib/prompts";
 import type {
