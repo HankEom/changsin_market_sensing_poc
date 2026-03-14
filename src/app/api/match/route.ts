@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { callGeminiJSON } from "@/lib/gemini";
-
-export const dynamic = "force-dynamic";
 import { getMatchVerificationPrompt } from "@/lib/prompts";
 import type {
   ApiResponse,
@@ -13,6 +11,10 @@ import type {
   TrendKeyword,
   ContainerCatalog,
 } from "@/types";
+
+export const dynamic = "force-dynamic";
+
+const TOP_CONTAINERS_PER_KEYWORD = 5;
 
 export async function POST(
   request: NextRequest
@@ -26,30 +28,24 @@ export async function POST(
     }
 
     // 1. Determine which keywords to match
-    let trendKeywords: TrendKeyword[];
+    const { data: kwData } = body.keyword
+      ? await supabase
+          .from("trend_keywords")
+          .select("*")
+          .eq("keyword", body.keyword)
+          .limit(1)
+      : await supabase.from("trend_keywords").select("*");
 
-    if (body.keyword) {
-      const { data, error } = await supabase
-        .from("trend_keywords")
-        .select("*")
-        .eq("keyword", body.keyword)
-        .limit(1);
+    const trendKeywords = (kwData ?? []) as TrendKeyword[];
 
-      if (error) throw new Error(`Fetch keyword failed: ${error.message}`);
-      trendKeywords = (data ?? []) as TrendKeyword[];
-    } else {
-      // Top 5 by trend_index
-      const { data, error } = await supabase
-        .from("trend_keywords")
-        .select("*")
-        .order("trend_index", { ascending: false })
-        .limit(5);
+    // Sort by trend_index and take top 5 if no specific keyword
+    const sortedKeywords = body.keyword
+      ? trendKeywords
+      : [...trendKeywords]
+          .sort((a, b) => b.trend_index - a.trend_index)
+          .slice(0, 5);
 
-      if (error) throw new Error(`Fetch keywords failed: ${error.message}`);
-      trendKeywords = (data ?? []) as TrendKeyword[];
-    }
-
-    if (trendKeywords.length === 0) {
+    if (sortedKeywords.length === 0) {
       return NextResponse.json({
         success: true,
         data: { matches: [] },
@@ -59,8 +55,7 @@ export async function POST(
     // 2. Fetch all active containers
     const { data: containers, error: containerError } = await supabase
       .from("container_catalog")
-      .select("*")
-      .eq("is_active", true);
+      .select("*");
 
     if (containerError) {
       throw new Error(`Fetch containers failed: ${containerError.message}`);
@@ -68,11 +63,20 @@ export async function POST(
 
     const allContainers = (containers ?? []) as ContainerCatalog[];
 
-    // 3. For each trend keyword, match against containers via Gemini
+    // 3. Match each keyword against all containers via Gemini
     const matches: KeywordMatch[] = [];
+    const allInserts: {
+      keyword_id: string;
+      container_id: string;
+      similarity_score: number;
+      fit_score: number;
+      fit_reason: string;
+      suggestion: string;
+      match_rank: number;
+    }[] = [];
 
-    for (const tk of trendKeywords) {
-      const matchedContainers: MatchedContainer[] = [];
+    for (const tk of sortedKeywords) {
+      const matchedContainers: (MatchedContainer & { _container_id: string })[] = [];
 
       for (const container of allContainers) {
         const prompt = getMatchVerificationPrompt(tk.keyword, tk.category, {
@@ -92,15 +96,12 @@ export async function POST(
             user: prompt.user,
           });
         } catch {
-          console.warn(
-            `[match] Failed to verify ${tk.keyword} x ${container.container_code}`
-          );
           continue;
         }
 
-        // Only keep matches with fit_score >= 50
         if (verification.fit_score >= 50) {
           matchedContainers.push({
+            _container_id: container.id,
             container_code: container.container_code,
             container_name: container.container_name,
             shape: container.shape,
@@ -111,27 +112,41 @@ export async function POST(
             fit_reason: verification.fit_reason,
             suggestion: verification.suggestion,
           });
-
-          // Insert into match_results
-          await supabase.from("match_results").insert({
-            keyword_id: tk.id,
-            container_id: container.id,
-            similarity_score: verification.fit_score / 100,
-            fit_score: verification.fit_score,
-            fit_reason: verification.fit_reason,
-            suggestion: verification.suggestion,
-            match_rank: null, // will set after sorting
-          });
         }
       }
 
-      // Sort by fit_score descending and assign ranks
+      // Sort and take top N
       matchedContainers.sort((a, b) => b.fit_score - a.fit_score);
+      const topContainers = matchedContainers.slice(0, TOP_CONTAINERS_PER_KEYWORD);
+
+      // Prepare batch inserts
+      topContainers.forEach((c, idx) => {
+        allInserts.push({
+          keyword_id: tk.id,
+          container_id: c._container_id,
+          similarity_score: c.fit_score / 100,
+          fit_score: c.fit_score,
+          fit_reason: c.fit_reason,
+          suggestion: c.suggestion ?? "",
+          match_rank: idx + 1,
+        });
+      });
 
       matches.push({
         keyword: tk.keyword,
-        containers: matchedContainers,
+        containers: topContainers.map(({ _container_id, ...rest }) => rest),
       });
+    }
+
+    // 4. Batch insert all match results at once
+    if (allInserts.length > 0) {
+      const { error: insertError } = await supabase
+        .from("match_results")
+        .insert(allInserts);
+
+      if (insertError) {
+        console.warn(`[match] Batch insert error: ${insertError.message}`);
+      }
     }
 
     return NextResponse.json({
